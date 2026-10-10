@@ -1,8 +1,8 @@
 # Liquid Sloshing Signal Analysis
 
-用于液态样品受激后声振信号采集与探索性分析的 MATLAB 实验代码。这里展示的是研究原型，**不代表已经完成液体类别识别或性能验证**。
+这是液态样品声振检测课题前期留下的 MATLAB 采集和分析测试代码，主要用于摸清数据链路与可观察的信号特征。**它不是完整仪器软件，也没有经过液体识别性能验证。**
 
-*MATLAB prototypes for vibration-data acquisition and exploratory analysis of liquid-filled containers. This is ongoing research, not a validated classification system.*
+*Early MATLAB test scripts for acquiring and exploring vibration data from liquid-filled containers; not a validated classification system.*
 
 ## 代码范围
 
