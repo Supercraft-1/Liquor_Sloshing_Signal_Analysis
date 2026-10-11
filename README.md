@@ -2,7 +2,7 @@
 
 [![MATLAB reproduction](https://github.com/Supercraft-1/Liquor_Sloshing_Signal_Analysis/actions/workflows/reproduce.yml/badge.svg)](https://github.com/Supercraft-1/Liquor_Sloshing_Signal_Analysis/actions/workflows/reproduce.yml)
 
-使用一段实验记录和一段背景记录，完成时域预处理、FFT 幅值谱、Welch 功率谱与频段统计。输入数据、处理参数、参考数值和结果图均随仓库提供。
+使用一段实验记录和一段背景记录，完成时域预处理、FFT 幅值谱、Welch 功率谱与频段统计，并查看响应随时间的变化。输入数据、处理参数、参考数值和结果图均随仓库提供。
 
 **唯一运行入口：`run_demo.m`。** 不需要采集设备，不弹出选文件或选区间窗口，也不需要在历史实验版本之间选择。
 
@@ -25,13 +25,17 @@ run_demo
 | `waveform.png / .pdf` | 原始记录、分析窗口、实验与背景的 AC 波形 |
 | `spectrum.png / .pdf` | 独立 FFT 幅值谱及低频局部放大 |
 | `power.png / .pdf` | Welch PSD、频段功率和实验功率占比 |
+| `diagnostics.png / .pdf` | 短时 PSD、局部 RMS、响应区间候选与高频段时间变化 |
 | `metrics.csv` | RMS、谱峰、质心与总频段功率 |
 | `band_metrics.csv` | 每个频段的实验／背景功率、等效 RMS 和占比 |
 | `spectrum.csv / psd.csv` | 完整频率网格与频谱数值，用于自行作图 |
+| `time_frequency.csv / time_band_metrics.csv` | 平均前的逐帧 PSD 与四个频段的逐帧积分 |
+| `local_rms.csv / response_candidates.csv` | 局部 RMS 与超阈值活动区间；时间来自各自记录 |
+| `common_peaks.csv` | 实验／背景邻近强峰的频率、距离和幅值，不作来源认定 |
 | `analysis.mat` | 完整 `result` 结构体 |
 | `run_metadata.json` | 环境版本、参数、归一化方式和单位 |
 
-PNG 为 600 dpi，PDF 保留矢量图元。图表使用中文标签、白底细线和无网格坐标；需要安装 Noto Sans SC／Noto Sans CJK SC 或受支持的系统中文字体。排版取舍见 [图表规范](docs/figure_style.md)。
+PNG 为 600 dpi，PDF 保留矢量曲线和文字，短时谱矩阵作为图像嵌入。图表使用中文标签、白底细线和无网格坐标；需要安装 Noto Sans SC／Noto Sans CJK SC 或受支持的系统中文字体。排版取舍见 [图表规范](docs/figure_style.md)。
 
 ## 数据与固定参数
 
@@ -68,7 +72,7 @@ PNG 为 600 dpi，PDF 保留矢量图元。图表使用中文标签、白底细�
 
 ![独立 FFT 幅值谱和未经额外平滑的低频局部放大](expected/spectrum.png)
 
-上图用对数频率轴展示整个分析频段，下图放大 20–200 Hz。黑色实线和蓝色虚线分别为实验与背景的独立幅值谱，没有做谱减，也没有为了图形平滑而再滤波。
+上图用对数频率轴展示整个分析频段，下图放大 20–200 Hz。黑色实线和蓝色虚线分别为实验与背景的独立幅值谱，没有做谱减，也没有为了图形平滑而再滤波。下图空心圆标出与背景强峰相距不超过 2 Hz 的实验峰；标记不改变谱值，也不表示两峰的物理来源相同。
 
 实验最大 FFT 频点为 **50.0488 Hz**，对应幅值 **95.0972 ADC counts**。背景在约 50 Hz 附近也有谱峰；仅凭这对记录，不能把该频率认定为样品特征或瓶体固有频率。
 
@@ -91,6 +95,27 @@ Welch PSD 用分段平均展示频谱的整体分布；下方点图是对 PSD �
 
 [矢量 PDF](expected/power.pdf) · [完整指标](expected/metrics.csv) · [频段指标](expected/band_metrics.csv)
 
+### 时间变化：总体频谱没有展示的信息
+
+![两份独立记录的短时功率谱、活动区间候选和高频段均方响应](expected/diagnostics.png)
+
+上方是平均前的 9 帧 PSD，沿用 Welch 的 0.20 s 窗和 0.10 s 步长，使用同一灰度标尺。图中只放大 20–300 Hz，CSV 保留完整频率范围。实验和背景来自独立采集，横轴为各自记录时间，不能按横坐标比较事件同步性。
+
+左下方用 20 ms 局部 RMS 查找较强的活动区间，灰色区域为候选，空心圆为候选内的 RMS 最大值。本例实验有 **4 段候选**、背景有 **0 段**；它们不是已识别的施力时刻，也不是自动截出的自由衰减段。
+
+| 候选 | 区间（s，右端不包含） | 局部 RMS 最大值时刻（s） |
+| --- | --- | ---: |
+| 1 | [0.6714, 0.7010) | 0.6834 |
+| 2 | [0.9012, 0.9336) | 0.9178 |
+| 3 | [1.1444, 1.2236) | 1.2060 |
+| 4 | [1.4964, 1.5264) | 1.5088 |
+
+右下方为每帧 300–2000 Hz 的 PSD 积分，显示整体高频均方响应怎样随时间变化。连接帧中心的线只是便于阅读，不是额外拟合。横轴从各自分析窗口起点计时，不表示两次记录同步。
+
+另有 **4 对邻近谱峰**，大致位于 50、84–85、100 和 150 Hz。其中 83.62 与 85.45 Hz 相差约 1.83 Hz，仅落在匹配容差内，不能称为已确认的同一频率。完整值见 [邻近峰表](expected/common_peaks.csv)。
+
+[诊断图 PDF](expected/diagnostics.pdf) · [候选区间](expected/response_candidates.csv) · [逐帧频段积分](expected/time_band_metrics.csv) · [参数与判断规则](docs/time_diagnostics.md)
+
 ## 方法与代码
 
 ```mermaid
@@ -100,19 +125,22 @@ flowchart LR
     C --> D["时域波形<br/>AC RMS"]
     C --> E["Hann FFT<br/>幅值与谱峰"]
     C --> F["Welch PSD<br/>频段功率与占比"]
+    C --> G["逐帧 PSD / 局部 RMS<br/>时间变化与活动候选"]
+    E --> H["独立峰匹配<br/>邻近谱峰提示，不删除峰"]
 ```
 
 FFT 回答“哪些频点的幅值较大”，PSD 积分回答“这个频段贡献了多少均方响应”。两者采用不同的窗归一化，不能直接混用。窗口长度、频率网格、滤波顺序及指标公式见 [处理方法](docs/methodology.md)。
 
 记录中的 ADC 尚未标定为电压或加速度。本例展示信号处理过程，不输出液体分类、检测准确率或单次自由衰减参数。
 
-进一步的算法取舍见 [12 篇相关文献与改进建议](docs/literature_review.md)，涵盖谱估计、短时分析、瞬态检测、模态识别及容器液体响应。改进建议与当前已实现的方法分开说明。
+算法依据和适用条件见 [12 篇相关文献与算法取舍](docs/literature_review.md)，涵盖谱估计、短时分析、瞬态检测、模态识别及容器液体响应。已加入默认入口的三项诊断与后续有条件的模态拟合分开说明；本轮没有实现谱峭度、ERA、SSI 或液体分类。
 
 ```text
 run_demo.m               唯一入口，串联读取、分析和导出
 src/case_config.m        固定案例参数
 src/load_recording.m     CSV 列检查与读取
 src/analyze_pair.m       数据检查、全记录滤波、FFT / Welch 和指标
+src/analyze_diagnostics.m 逐帧 PSD、局部活动候选和邻近峰匹配
 src/integrate_psd.m      精确频段边界插值与积分
 src/plot_case.m          统一图表样式，导出 PNG / PDF
 src/export_results.m     表格、MAT 和方法元数据
@@ -131,9 +159,9 @@ results = runtests('tests');
 assertSuccess(results);
 ```
 
-测试覆盖解析正弦信号的频率、幅值和均方功率，补零与功率积分、背景不消除实验谱峰、原始数据一致性、重复运行、输出文件，以及错误时间戳、NaN 和不完整窗口等情况。参考数值用容差比较，不要求跨平台 PNG 的像素完全一致。
+测试覆盖解析正弦信号的频率、幅值和均方功率，补零与功率积分、逐帧 PSD 与 Welch 的一致性、候选定位／合并／最短活动／边缘窗口、邻近峰一对一匹配，以及原始数据、重复运行、输出文件和无效输入。零响应不生成候选或谱峰，并采用正常的非负图轴。参考数值用容差比较，不要求跨平台 PNG 的像素完全一致。
 
-[GitHub Actions](https://github.com/Supercraft-1/Liquor_Sloshing_Signal_Analysis/actions/workflows/reproduce.yml) 会在独立 Ubuntu 环境安装 R2025b 和工具箱，运行这些测试及 `run_demo`，将 12 个输出文件作为附件保留 7 天。
+[GitHub Actions](https://github.com/Supercraft-1/Liquor_Sloshing_Signal_Analysis/actions/workflows/reproduce.yml) 会在独立 Ubuntu 环境安装 R2025b 和工具箱，运行这些测试及 `run_demo`，将 19 个输出文件作为附件保留 7 天。
 
 - **找不到 `run_demo`**：确认当前文件夹是仓库根目录，不是 `src/` 或 `legacy/`。
 - **`Sloshing:MissingToolbox`**：安装并激活 Signal Processing Toolbox。

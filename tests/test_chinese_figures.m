@@ -49,7 +49,8 @@ testCase.TestData.work = work;
             for j = 1:numel(lineObjects)
                 line = lineObjects(j);
                 item.lines{j} = struct('y', line.YData(:), 'x', line.XData(:), ...
-                    'marker', line.Marker, 'style', line.LineStyle, 'yScale', ax.YScale);
+                    'marker', line.Marker, 'style', line.LineStyle, ...
+                    'yScale', ax.YScale, 'yLimits', ax.YLim);
             end
             entry.axes{i} = item;
         end
@@ -57,6 +58,9 @@ testCase.TestData.work = work;
         entry.textSizes = arrayfun(@(t) t.FontSize, texts);
         entry.textColors = arrayfun(@(t) norm(t.Color), texts);
         entry.bars = numel(findall(fig, 'Type', 'bar'));
+        images = findall(fig, 'Type', 'image');
+        entry.images = arrayfun(@(im) struct('data', im.CData, 'alpha', im.AlphaData), ...
+            images, 'UniformOutput', false);
         captured{end + 1} = entry;
     end
 end
@@ -67,7 +71,7 @@ end
 
 function testAxesUseChineseLabels(testCase)
 figures = testCase.TestData.figures;
-verifyNumElements(testCase, figures, 3);
+verifyNumElements(testCase, figures, 4);
 chinese = [];
 for i = 1:numel(figures)
     for j = 1:numel(figures{i}.axes)
@@ -131,6 +135,63 @@ end
 
 function testFigureCleanupDoesNotLeakWindows(testCase)
 verifyEqual(testCase, findall(groot, 'Type', 'figure'), testCase.TestData.existingFigures);
+end
+
+function testShortTimeImagesUseUnmodifiedPSD(testCase)
+images = {};
+for entry = testCase.TestData.figures
+    images = [images, entry{1}.images(:)']; %#ok<AGROW>
+end
+assertNumElements(testCase, images, 2);
+d = testCase.TestData.result.diagnostics.time_frequency;
+visible = d.signal.frequency_hz >= 20 & d.signal.frequency_hz <= 300;
+expected = {10 * log10(d.signal.density(visible, :)), ...
+    10 * log10(d.background.density(visible, :))};
+for i = 1:2
+    verifyTrue(testCase, any(cellfun(@(im) isequaln(im.data, expected{i}), images)));
+end
+end
+
+function testDiagnosticPlotUsesActualLocalRMS(testCase)
+r = testCase.TestData.result;
+line = findPlottedValues(testCase.TestData.figures, r.diagnostics.responses.signal.rms_adc);
+assertNotEmpty(testCase, line);
+verifyEqual(testCase, line.x, r.signal.time_s);
+high = r.config.bands_hz(:, 1) >= 300;
+power = sum(r.diagnostics.time_frequency.signal.band_power_adc2(:, high), 2);
+line = findPlottedValues(testCase.TestData.figures, power);
+assertNotEmpty(testCase, line);
+verifyGreaterThan(testCase, line.yLimits(2), 4 * max(power));
+end
+
+function testZeroResponseUsesReadableNonnegativeAxis(testCase)
+c = case_config;
+t = (0:12499)' / c.fs;
+raw = [t, 2048 * ones(size(t))];
+r = analyze_pair(raw, raw, c);
+directory = fullfile(testCase.TestData.work, 'zero');
+mkdir(directory);
+previous = get(groot, 'DefaultFigureDeleteFcn');
+restore = onCleanup(@() set(groot, 'DefaultFigureDeleteFcn', previous));
+limits = [];
+set(groot, 'DefaultFigureDeleteFcn', @captureZeroAxis);
+plot_case(raw, r, directory);
+assertNumElements(testCase, limits, 2);
+verifyEqual(testCase, limits(1), 0);
+verifyGreaterThanOrEqual(testCase, limits(2), 1);
+verifyLessThanOrEqual(testCase, limits(2), 10);
+verifyEqual(testCase, r.diagnostics.responses.signal.rms_adc, zeros(5000, 1));
+set(groot, 'DefaultFigureDeleteFcn', previous);
+clear restore
+
+    function captureZeroAxis(fig, ~)
+        axesObjects = findall(fig, 'Type', 'axes');
+        for i = 1:numel(axesObjects)
+            if contains(string(axesObjects(i).YLabel.String), '局部 RMS')
+                limits = axesObjects(i).YLim;
+            end
+        end
+    end
 end
 
 function found = findPlottedValues(figures, expected)

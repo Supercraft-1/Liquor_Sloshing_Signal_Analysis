@@ -7,6 +7,7 @@ s.font = chinese_font;
 draw_waveform(rawSignal, result, outputDir, s);
 draw_fft(result, outputDir, s);
 draw_power(result, outputDir, s);
+draw_diagnostics(result, outputDir, s);
 end
 
 function draw_waveform(rawSignal, result, outputDir, s)
@@ -81,6 +82,11 @@ if isfinite(result.peak_frequency_hz)
     xline(ax, result.peak_frequency_hz, '--', 'Color', s.raw, 'HandleVisibility', 'off');
     corner_label(ax, sprintf('最大幅值频点 %.2f Hz', result.peak_frequency_hz));
 end
+matches = result.diagnostics.common_peaks.matches;
+visibleMatches = matches.Experiment_Frequency_Hz >= 20 & matches.Experiment_Frequency_Hz <= 200;
+plot(ax, matches.Experiment_Frequency_Hz(visibleMatches), ...
+    matches.Experiment_Amplitude_ADC(visibleMatches), 'o', 'Color', s.signal, ...
+    'MarkerFaceColor', 'w', 'MarkerSize', 4, 'LineStyle', 'none', 'HandleVisibility', 'off');
 xlim(ax, [20, 200]);
 xlabel(ax, '频率（Hz）'); ylabel(ax, '幅值（ADC 计数）');
 panel_title(ax, '(b) 低频局部放大');
@@ -136,6 +142,94 @@ end
 case_legend(ax);
 format_axes(ax, s);
 export_figure(fig, outputDir, 'power');
+end
+
+function draw_diagnostics(result, outputDir, s)
+fig = make_figure(s);
+fig.Position(4) = 14.5;
+cleanup = onCleanup(@() close(fig));
+layout = tiledlayout(fig, 2, 2, 'TileSpacing', 'loose', 'Padding', 'compact');
+d = result.diagnostics;
+tf = {d.time_frequency.signal, d.time_frequency.background};
+labels = {'(a) 实验短时功率谱', '(b) 背景短时功率谱'};
+peak = max([tf{1}.density(:); tf{2}.density(:)]);
+upper = 0;
+if peak > 0
+    upper = ceil(10 * log10(peak) / 10) * 10;
+end
+limits = [upper - 80, upper];
+for i = 1:2
+    ax = nexttile(layout);
+    visible = tf{i}.frequency_hz >= 20 & tf{i}.frequency_hz <= 300;
+    values = 10 * log10(tf{i}.density(visible, :));
+    imagesc(ax, tf{i}.frame_center_s, tf{i}.frequency_hz(visible), values, ...
+        'AlphaData', isfinite(values));
+    ax.YDir = 'normal';
+    colormap(ax, flipud(gray(256)));
+    clim(ax, limits);
+    xlabel(ax, '帧中心记录时间（s）'); ylabel(ax, '频率（Hz）');
+    panel_title(ax, labels{i});
+    cb = colorbar(ax, 'Location', 'eastoutside');
+    cb.FontName = s.font; cb.FontSize = 7; cb.Color = 'k';
+    cb.Label.String = 'PSD（dB re 1 ADC 计数^2/Hz）';
+    cb.Label.FontSize = 7; cb.Label.Color = 'k';
+    format_axes(ax, s);
+end
+
+ax = nexttile(layout);
+response = d.responses.signal;
+maximum = max([response.rms_adc; response.threshold_adc]);
+if max(response.rms_adc) == 0
+    maximum = 1;
+end
+hold(ax, 'on');
+candidates = response.candidates;
+for i = 1:height(candidates)
+    bounds = [candidates.Start_Time_s(i), candidates.End_Time_s(i)];
+    patch(ax, bounds([1, 2, 2, 1]), [0, 0, maximum * 1.15, maximum * 1.15], ...
+        [0.92, 0.92, 0.92], 'EdgeColor', 'none', 'HandleVisibility', 'off');
+end
+plot(ax, response.time_s, response.rms_adc, 'Color', s.signal, 'LineWidth', 0.75);
+yline(ax, response.threshold_adc, '--', 'Color', [0.4, 0.4, 0.4], 'HandleVisibility', 'off');
+text(ax, response.time_s(1), response.threshold_adc + 0.015 * maximum, '阈值', ...
+    'Color', 'k', 'FontSize', 7, 'VerticalAlignment', 'bottom');
+plot(ax, candidates.Peak_Time_s, candidates.Peak_RMS_ADC, 'o', ...
+    'Color', s.signal, 'MarkerFaceColor', 'w', 'MarkerSize', 3, ...
+    'LineStyle', 'none', 'HandleVisibility', 'off');
+ylim(ax, [0, maximum * 1.15]); xlim(ax, result.config.signal_window_s);
+xlabel(ax, '实验记录时间（s）'); ylabel(ax, '局部 RMS（ADC 计数）');
+panel_title(ax, sprintf('(c) 响应区间候选（%d 段）', height(candidates)));
+format_axes(ax, s);
+
+ax = nexttile(layout);
+high = result.config.bands_hz(:, 1) >= 300;
+framePowers = cell(2, 1);
+for i = 1:2
+    relative = tf{i}.frame_center_s - tf{i}.frame_start_s(1);
+    values = sum(tf{i}.band_power_adc2(:, high), 2);
+    framePowers{i} = values;
+    if i == 1
+        plot(ax, relative, positive_only(values), '-o', 'Color', s.signal, ...
+            'LineWidth', 0.75, 'MarkerSize', 3, 'MarkerFaceColor', s.signal);
+        hold(ax, 'on');
+    else
+        plot(ax, relative, positive_only(values), '--s', 'Color', s.background, ...
+            'LineWidth', 0.75, 'MarkerSize', 3, 'MarkerFaceColor', 'w');
+    end
+end
+ax.YScale = 'log';
+positive = vertcat(framePowers{:});
+positive = positive(positive > 0);
+if ~isempty(positive)
+    % Leave a dedicated vertical margin for the legend, not over data points.
+    ylim(ax, [10 ^ floor(log10(min(positive))), max(positive) * 8]);
+end
+xlabel(ax, '区间内帧中心时间（s）'); ylabel(ax, '均方响应（ADC 计数^2）');
+panel_title(ax, '(d) 300-2000 Hz 短时响应');
+case_legend(ax);
+ax.Legend.Location = 'northwest';
+format_axes(ax, s);
+export_figure(fig, outputDir, 'diagnostics');
 end
 
 function fig = make_figure(s)

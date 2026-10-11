@@ -2,6 +2,11 @@ function result = analyze_pair(signal, background, config)
 %ANALYZE_PAIR Deterministic offline analysis of two independent recordings.
 % Inputs: N-by-2 doubles [Time_s, ADC_Value] and the fixed case configuration.
 % Outputs: processed windows, independent FFT/PSD estimates, and band metrics.
+% Older callers need not supply the newly added optional settings section.
+if ~isfield(config, 'diagnostics')
+    defaults = case_config;
+    config.diagnostics = defaults.diagnostics;
+end
 validate_config(config);
 validate_recording(signal, config.fs, 'experiment');
 validate_recording(background, config.fs, 'background');
@@ -43,6 +48,7 @@ if peakAmplitude > 0
     result.peak_frequency_hz = frequencies(peakIndex);
 end
 result.metrics = summary_metrics(result, peakAmplitude);
+result.diagnostics = analyze_diagnostics(result);
 end
 
 function validate_config(config)

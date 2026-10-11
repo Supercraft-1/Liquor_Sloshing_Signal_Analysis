@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "matlab_version": "25.2.0.2998904 (R2025b)",
   "matlab_release": "2025b",
   "signal_toolbox_version": "25.2",
@@ -41,7 +41,15 @@
         1000,
         2000
       ]
-    ]
+    ],
+    "diagnostics": {
+      "envelope_window_s": 0.02,
+      "threshold_mad_multiplier": 4,
+      "minimum_relative_rise": 0.25,
+      "merge_gap_s": 0.04,
+      "minimum_active_s": 0.006,
+      "peak_prominence_fraction": 0.05
+    }
   },
   "preprocessing": "Full-record DC removal and SOS filtfilt, then crop and remove window mean",
   "amplitude_unit": "uncalibrated ADC counts",
@@ -54,5 +62,19 @@
     "prototype_order": 4,
     "single_pass_bandpass_order": 8,
     "forward_backward": true
+  },
+  "diagnostics": {
+    "psd_method": "spectrogram one-sided PSD; same Hann, overlap and NFFT as pwelch",
+    "frame_time": "Absolute center of each half-open frame; independent recordings",
+    "rms_method": "Centered moving RMS; shortened support at window edges",
+    "threshold_method": "Median + max(k * 1.4826 * MAD, relative rise * median, numerical roundoff guard); coefficients in config",
+    "response_interpretation": "Above-threshold activity candidates, not excitation times and not free decay",
+    "peak_interpretation": "Nearby strong FFT peaks, not confirmed common physical sources",
+    "peak_match_tolerance_hz": 2,
+    "parameter_estimation": "not_performed",
+    "reason": "Unmeasured excitation and unverified free-response intervals",
+    "experiment_candidate_count": 4,
+    "background_candidate_count": 0,
+    "common_peak_count": 4
   }
 }

@@ -144,7 +144,7 @@ end
 
 function testPublicationFilesAreReadable(testCase)
 directory = fullfile(testCase.TestData.work, 'first');
-names = {'waveform', 'spectrum', 'power'};
+names = {'waveform', 'spectrum', 'power', 'diagnostics'};
 for i = 1:numel(names)
     info = imfinfo(fullfile(directory, [names{i}, '.png']));
     verifyGreaterThanOrEqual(testCase, info.Width, 2200);
@@ -156,4 +156,34 @@ for i = 1:numel(names)
     verifyEqual(testCase, header, '%PDF-');
     clear cleanup
 end
+end
+
+function testDiagnosticTablesRoundTripActualAnalysis(testCase)
+r = testCase.TestData.result;
+assertTrue(testCase, isfield(r, 'diagnostics'), 'Diagnostic analysis is missing.');
+directory = fullfile(testCase.TestData.work, 'first');
+files = {'time_frequency.csv', 'time_band_metrics.csv', 'local_rms.csv', ...
+    'response_candidates.csv', 'common_peaks.csv', 'diagnostics.png', 'diagnostics.pdf'};
+for i = 1:numel(files)
+    assertTrue(testCase, isfile(fullfile(directory, files{i})));
+end
+tf = readtable(fullfile(directory, 'time_frequency.csv'), 'TextType', 'string');
+verifyEqual(testCase, height(tf), 18450);
+signalRows = tf.Recording == "experiment";
+verifyEqual(testCase, tf.PSD_ADC2_Per_Hz(signalRows), ...
+    r.diagnostics.time_frequency.signal.density(:), 'RelTol', 1e-12, 'AbsTol', 1e-12);
+verifyEqual(testCase, tf.Frame_Center_s(find(signalRows, 1)), 0.70, 'AbsTol', 1e-12);
+envelope = readtable(fullfile(directory, 'local_rms.csv'));
+verifyEqual(testCase, envelope.Experiment_RMS_ADC, ...
+    r.diagnostics.responses.signal.rms_adc, 'RelTol', 1e-12);
+candidates = readtable(fullfile(directory, 'response_candidates.csv'), 'TextType', 'string');
+verifyEqual(testCase, candidates.Peak_Time_s(candidates.Recording == "experiment"), ...
+    r.diagnostics.responses.signal.candidates.Peak_Time_s, 'AbsTol', 1e-12);
+peaks = readtable(fullfile(directory, 'common_peaks.csv'));
+verifyEqual(testCase, peaks.Experiment_Frequency_Hz, ...
+    r.diagnostics.common_peaks.matches.Experiment_Frequency_Hz, 'AbsTol', 1e-12);
+meta = jsondecode(fileread(fullfile(directory, 'run_metadata.json')));
+verifyEqual(testCase, meta.schema_version, 3);
+verifyEqual(testCase, meta.diagnostics.parameter_estimation, 'not_performed');
+verifyTrue(testCase, contains(meta.diagnostics.response_interpretation, 'not free decay'));
 end
