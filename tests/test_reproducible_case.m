@@ -31,15 +31,25 @@ verifyEqual(testCase, actual.Unit, expected.Unit);
 verifyEqual(testCase, actual.Value, expected.Value, 'RelTol', 1e-7, 'AbsTol', 1e-8);
 end
 
+function testPublishedBandReference(testCase)
+expected = readtable(fullfile(testCase.TestData.root, 'expected', 'band_metrics.csv'));
+actual = testCase.TestData.result.bands;
+verifyEqual(testCase, actual.Properties.VariableNames, expected.Properties.VariableNames);
+verifyEqual(testCase, actual.Band, expected.Band);
+verifyEqual(testCase, actual{:, 2:end}, expected{:, 2:end}, 'RelTol', 1e-7, 'AbsTol', 1e-8);
+end
+
 function testIndependentOfWorkingDirectory(testCase)
 originalFolder = pwd;
 restoreFolder = onCleanup(@() cd(originalFolder));
 cd(testCase.TestData.work);
 second = run_demo(fullfile(testCase.TestData.work, 'second'));
 verifyEqual(testCase, second.metrics.Value, testCase.TestData.result.metrics.Value);
-verifyEqual(testCase, second.contrast_amplitude, testCase.TestData.result.contrast_amplitude);
+verifyEqual(testCase, second.fft.signal_amplitude, testCase.TestData.result.fft.signal_amplitude);
+verifyEqual(testCase, second.psd.signal_density, testCase.TestData.result.psd.signal_density);
 files = {'waveform.png', 'spectrum.png', 'metrics.csv', 'spectrum.csv', ...
-    'analysis.mat', 'run_metadata.json'};
+    'analysis.mat', 'run_metadata.json', 'waveform.pdf', 'spectrum.pdf', ...
+    'power.png', 'power.pdf', 'psd.csv', 'band_metrics.csv'};
 for k = 1:numel(files)
     verifyTrue(testCase, isfile(fullfile(testCase.TestData.work, 'second', files{k})));
 end
@@ -60,14 +70,14 @@ end
 
 function testKnownToneFrequencyAndAmplitude(testCase)
 config = testCase.TestData.result.config;
-t = (0:4999)' / config.fs;
-signal = [t + 0.6, 2048 + 100 * sin(2 * pi * 125 * t)];
+t = (0:12499)' / config.fs;
+signal = [t, 2048 + 100 * sin(2 * pi * 125 * t)];
 background = [t, 2048 * ones(size(t))];
 result = analyze_pair(signal, background, config);
 verifyEqual(testCase, result.peak_frequency_hz, 125, 'AbsTol', config.fs / 8192);
-verifyGreaterThan(testCase, max(result.contrast_amplitude), 95);
-verifyLessThan(testCase, max(result.contrast_amplitude), 101);
-verifyEqual(testCase, result.background.filtered, zeros(size(t)), 'AbsTol', 1e-10);
+verifyGreaterThan(testCase, max(result.fft.signal_amplitude), 95);
+verifyLessThan(testCase, max(result.fft.signal_amplitude), 101);
+verifyEqual(testCase, result.background.filtered, zeros(5000, 1), 'AbsTol', 1e-10);
 end
 
 function testAmplitudeScalingPreservesRatio(testCase)
@@ -77,7 +87,7 @@ signal(:, 2) = 2 * signal(:, 2);
 background(:, 2) = 2 * background(:, 2);
 scaled = analyze_pair(signal, background, testCase.TestData.result.config);
 actual = testCase.TestData.result;
-verifyEqual(testCase, scaled.contrast_amplitude, 2 * actual.contrast_amplitude, 'AbsTol', 1e-9);
+verifyEqual(testCase, scaled.fft.signal_amplitude, 2 * actual.fft.signal_amplitude, 'AbsTol', 1e-9);
 verifyEqual(testCase, scaled.metrics.Value(end), actual.metrics.Value(end), 'RelTol', 1e-9);
 end
 
@@ -116,6 +126,34 @@ signal(:, 2) = 2048;
 background(:, 2) = 2048;
 result = analyze_pair(signal, background, testCase.TestData.result.config);
 verifyTrue(testCase, isnan(result.peak_frequency_hz));
-verifyEqual(testCase, result.contrast_amplitude, zeros(size(result.frequency_hz)));
+verifyEqual(testCase, result.fft.signal_amplitude, zeros(size(result.fft.frequency_hz)));
+verifyEqual(testCase, result.psd.signal_density, zeros(size(result.psd.frequency_hz)));
 verifyTrue(testCase, isnan(result.metrics.Value(end)));
+end
+
+function testExportedSpectraMatchAnalysis(testCase)
+directory = fullfile(testCase.TestData.work, 'first');
+actual = testCase.TestData.result;
+fftData = readtable(fullfile(directory, 'spectrum.csv'));
+psdData = readtable(fullfile(directory, 'psd.csv'));
+verifyEqual(testCase, fftData.Experiment_Amplitude_ADC, actual.fft.signal_amplitude, ...
+    'RelTol', 1e-12, 'AbsTol', 1e-12);
+verifyEqual(testCase, psdData.Experiment_PSD_ADC2_Per_Hz, actual.psd.signal_density, ...
+    'RelTol', 1e-12, 'AbsTol', 1e-12);
+end
+
+function testPublicationFilesAreReadable(testCase)
+directory = fullfile(testCase.TestData.work, 'first');
+names = {'waveform', 'spectrum', 'power'};
+for i = 1:numel(names)
+    info = imfinfo(fullfile(directory, [names{i}, '.png']));
+    verifyGreaterThanOrEqual(testCase, info.Width, 2200);
+    verifyGreaterThanOrEqual(testCase, info.Height, 1500);
+    file = fopen(fullfile(directory, [names{i}, '.pdf']), 'rb');
+    assertGreaterThanOrEqual(testCase, file, 0);
+    cleanup = onCleanup(@() fclose(file));
+    header = char(fread(file, 5, '*uint8')');
+    verifyEqual(testCase, header, '%PDF-');
+    clear cleanup
+end
 end

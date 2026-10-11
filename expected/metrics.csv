@@ -1,13 +1,15 @@
 Metric,Value,Unit
 sample_rate_hz,5000,Hz
 window_samples,5000,samples
-nfft,8192,points
+fft_nfft,8192,points
 fft_bin_spacing_hz,0.6103515625,Hz
-signal_filtered_rms_adc,196.766137838629,ADC counts
-background_filtered_rms_adc,7.97610219740047,ADC counts
-contrast_peak_frequency_hz,24.4140625,Hz
-contrast_peak_amplitude_adc,76.9697640983066,ADC counts
-contrast_centroid_hz,51.6615663401888,Hz
-contrast_squared_sum_50_300_hz,46995.0173744075,ADC counts^2 (fixed FFT grid)
-contrast_squared_sum_300_1000_hz,391.268776709881,ADC counts^2 (fixed FFT grid)
-contrast_high_low_ratio,0.00832575022991603,dimensionless
+welch_segment_count,9,segments
+welch_bin_spacing_hz,2.44140625,Hz
+signal_filtered_rms_adc,196.912085158592,ADC counts
+background_filtered_rms_adc,8.26959057178465,ADC counts
+fft_peak_frequency_hz,50.048828125,Hz
+fft_peak_amplitude_adc,95.0972067144736,ADC counts
+signal_psd_centroid_hz,54.5669442692885,Hz
+signal_20_2000_power_adc2,43463.8816927264,ADC counts^2
+background_20_2000_power_adc2,68.6132596138331,ADC counts^2
+signal_300_1000_to_50_300_power_ratio,0.0117646799343469,dimensionless

@@ -1,4 +1,5 @@
 {
+  "schema_version": 2,
   "matlab_version": "25.2.0.2998904 (R2025b)",
   "matlab_release": "2025b",
   "signal_toolbox_version": "25.2",
@@ -11,18 +12,47 @@
       1.6
     ],
     "background_window_s": [
-      0,
-      1
+      0.2,
+      1.2
     ],
-    "median_points": 5,
     "filter_order": 4,
     "band_hz": [
       20,
       2000
     ],
-    "tukey_alpha": 0.1
+    "fft_nfft": 8192,
+    "welch_segment_samples": 1000,
+    "welch_overlap_samples": 500,
+    "welch_nfft": 2048,
+    "bands_hz": [
+      [
+        20,
+        50
+      ],
+      [
+        50,
+        300
+      ],
+      [
+        300,
+        1000
+      ],
+      [
+        1000,
+        2000
+      ]
+    ]
   },
+  "preprocessing": "Full-record DC removal and SOS filtfilt, then crop and remove window mean",
   "amplitude_unit": "uncalibrated ADC counts",
-  "spectrum_normalization": "one-sided FFT amplitude / sum(Tukey window)",
-  "contrast_definition": "sqrt(max(signal_amplitude^2 - background_amplitude^2, 0))"
+  "fft_normalization": "Periodic Hann; abs(FFT)/sum(window); double interior one-sided bins",
+  "psd_method": "pwelch, periodic Hann, one-sided density in ADC counts^2/Hz",
+  "welch_segment_count": 9,
+  "band_integration": "Linear interpolation at exact band edges, trapezoidal PSD integration",
+  "background_comparison": "Independent spectra; no subtraction or denoising claim",
+  "filter": {
+    "prototype_order": 4,
+    "single_pass_bandpass_order": 8,
+    "forward_backward": true
+  }
 }
