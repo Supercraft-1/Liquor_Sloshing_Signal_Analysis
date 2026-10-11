@@ -6,16 +6,16 @@
 
 使用与 Welch 相同的 1000 点周期 Hann 窗、500 点重叠、2048 点 FFT。在 5000 Hz 下，每帧为 0.20 s，步长为 0.10 s，每份记录共 9 帧。`spectrogram` 直接返回单边 PSD：[MathWorks 文档](https://www.mathworks.com/help/signal/ref/spectrogram.html)。
 
-$$
-P_m[k]=\frac{c_k|\operatorname{FFT}_{2048}\{x_m[n]w[n]\}|^2}{f_s\sum_n w[n]^2},
+```math
+P_m[k]=\frac{c_k|\mathrm{FFT}_{2048}\{x_m[n]w[n]\}|^2}{f_s\sum_n w[n]^2},
 \qquad S_{xx}[k]=\frac{1}{9}\sum_{m=1}^{9}P_m[k].
-$$
+```
 
-直流及奈奎斯特频点取 $c_k=1$，其余单边频点取 2。PSD 单位为 ADC counts²/Hz，与原 `pwelch` 相同。测试同时检查逐帧平均和 Parseval 关系：
+直流及奈奎斯特频点取 $`c_k=1`$，其余单边频点取 2。PSD 单位为 ADC counts²/Hz，与原 `pwelch` 相同。测试同时检查逐帧平均和 Parseval 关系：
 
-$$
+```math
 \sum_k P_m[k]\Delta f=\frac{\sum_n(x_m[n]w[n])^2}{\sum_n w[n]^2}.
-$$
+```
 
 这里使用完整频率箱求和。四个统计频段仍用精确边界插值及梯形积分，沿用原 `integrate_psd`；四段每帧积分的时间平均与原频段指标一致。
 
@@ -29,18 +29,18 @@ $$
 
 100 点，即 20 ms 的移动 RMS 为
 
-$$
+```math
 r[n]=\sqrt{\frac{1}{|I_n|}\sum_{i\in I_n}x[i]^2},
 \qquad I_n=[n-49,n+50]\cap[1,N].
-$$
+```
 
 靠近两端时缩短窗口，不补零。100 点偶数窗口在右侧多取一个样本。
 
-设 $b=\operatorname{median}(r)$、$d=\operatorname{median}(|r-b|)$，阈值为
+设 $`b=\mathrm{median}(r)`$、$`d=\mathrm{median}(|r-b|)`$，阈值为
 
-$$
-T=b+\max\{4\times1.4826d,\ 0.25b,\ 32\operatorname{eps}(\max r)\}.
-$$
+```math
+T=b+\max\{4\times1.4826d,\ 0.25b,\ 32\mathrm{eps}(\max r)\}.
+```
 
 `eps` 项防止浮点舍入在全零或近零数据上生成活动。1.4826 是 MAD 在正态分布下常用的尺度换算系数，但这里的响应不假设正态分布，阈值不代表统计显著性或误报概率。相对上升项用于抑制稳定正弦的微小包络起伏。
 
@@ -58,9 +58,9 @@ $$
 
 峰间最小距离及匹配容差为
 
-$$
+```math
 \delta f=\frac{2f_s}{N}=2\ \mathrm{Hz}.
-$$
+```
 
 该尺度为 1 s Hann 主瓣零点间宽度的一半，不是频率误差或置信区间。分别筛出的实验与背景峰按频率距离从小到大配对，每个峰最多出现一次；等距离时按峰索引决定顺序。输出精确频率、距离和各自幅值，而不是把两者改写成同一频率。
 

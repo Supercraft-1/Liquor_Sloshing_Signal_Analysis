@@ -128,13 +128,13 @@ FDD 的谱矩阵依赖同步多通道响应。当前实验与背景为两次独�
 
 逐帧 PSD 沿用基准流程的滤波顺序和固定窗口，显示各时段对总体谱的贡献。
 
-对第 $m$ 帧，使用与当前 Welch 相同的周期 Hann 窗，计算
+对第 $`m`$ 帧，使用与当前 Welch 相同的周期 Hann 窗，计算
 
-$$
-P_m[k]=\frac{c_k\left|\operatorname{FFT}\{x_m[n]w[n]\}\right|^2}{f_s\sum_n w[n]^2},
-$$
+```math
+P_m[k]=\frac{c_k\left|\mathrm{FFT}\{x_m[n]w[n]\}\right|^2}{f_s\sum_n w[n]^2},
+```
 
-其中 $c_k$ 在直流和奈奎斯特频点取 1，其余单边频点取 2，单位为 ADC counts²/Hz。对这 9 帧取平均应与现有 `pwelch` 结果一致。逐帧频段积分可以显示哪一段时间贡献了较多均方响应。[Welch，1967](https://research.ibm.com/publications/the-use-of-fast-fourier-transform-for-the-estimation-of-power-spectra-a-method-based-on-time-averaging-over-short-modified-periodograms)
+其中 $`c_k`$ 在直流和奈奎斯特频点取 1，其余单边频点取 2，单位为 ADC counts²/Hz。对这 9 帧取平均应与现有 `pwelch` 结果一致。逐帧频段积分可以显示哪一段时间贡献了较多均方响应。[Welch，1967](https://research.ibm.com/publications/the-use-of-fast-fourier-transform-for-the-estimation-of-power-spectra-a-method-based-on-time-averaging-over-short-modified-periodograms)
 
 0.20 s 窗会扩展瞬态在谱图中的时间范围，因此条带起点只能近似反映响应变化。输出保留帧起止、中心及频率坐标，窗口和重叠参数见运行元数据。[Allen 与 Rabiner，1977](https://web.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/122_unified_approach_to_STFT.pdf)
 
@@ -154,16 +154,16 @@ $$
 
 下一阶段只有在激励已经结束、下一次激励之前存在足够长的响应、分析频带合理且信号仍高于可用噪声参考时，才考虑衰减拟合。孤立的近似单模态响应可用
 
-$$
+```math
 x(t)=A e^{-\alpha t}\cos(2\pi f_d t+\phi)
-$$
+```
 
-描述。这里 $f_d$ 是阻尼振动频率，单位为 Hz，$\alpha>0$ 是指数衰减率，单位为 s⁻¹。此时 $\tau=1/\alpha$，并有
+描述。这里 $`f_d`$ 是阻尼振动频率，单位为 Hz，$`\alpha>0`$ 是指数衰减率，单位为 s⁻¹。此时 $`\tau=1/\alpha`$，并有
 
-$$
+```math
 f_n=\frac{\sqrt{(2\pi f_d)^2+\alpha^2}}{2\pi},\qquad
 \zeta=\frac{\alpha}{\sqrt{(2\pi f_d)^2+\alpha^2}}.
-$$
+```
 
 这是单模态线性自由响应模型，不适用于持续驱动、反复激励或明显多模态拍频的整段信号。拟合后必须检查残差、区间变化及重复实验稳定性；条件不满足时不输出阻尼比或衰减时间。多模态自由响应才进一步考虑 ERA 等方法。[Juang 与 Pappa，1985](https://ntrs.nasa.gov/api/citations/19850022899/downloads/19850022899.pdf)
 
@@ -189,7 +189,7 @@ $$
 代码测试和参考输出核对以下项目。
 
 - 原有 14 项参考指标保持在既定数值容差内，原始 CSV 哈希不变。
-- 逐帧 PSD 平均与当前 Welch 一致；完整单边频率箱求和乘以频点间隔，应等于 $\sum_n (x[n]w[n])^2/\sum_n w[n]^2$，而非未经加权的整窗 RMS 平方。
+- 逐帧 PSD 平均与当前 Welch 一致；完整单边频率箱求和乘以频点间隔，应等于 $`\sum_n (x[n]w[n])^2/\sum_n w[n]^2`$，而非未经加权的整窗 RMS 平方。
 - 稳定正弦、已知突变与零信号分别验证持续谱峰、候选定位和零值处理；改变幅值时保持正确的平方功率尺度。
 - 实验与背景含同频已知正弦时，给出邻近峰提示，但不自动删除它；相距超过匹配容差的峰不应匹配，容差内的不同频率仍仅为候选。
 - 分段不足、匹配竞争和边缘支持等情况处理一致。
