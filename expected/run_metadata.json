@@ -1,0 +1,28 @@
+{
+  "matlab_version": "25.2.0.2998904 (R2025b)",
+  "matlab_release": "2025b",
+  "signal_toolbox_version": "25.2",
+  "signal_source": "data/example_signal.csv",
+  "background_source": "data/example_background.csv",
+  "config": {
+    "fs": 5000,
+    "signal_window_s": [
+      0.6,
+      1.6
+    ],
+    "background_window_s": [
+      0,
+      1
+    ],
+    "median_points": 5,
+    "filter_order": 4,
+    "band_hz": [
+      20,
+      2000
+    ],
+    "tukey_alpha": 0.1
+  },
+  "amplitude_unit": "uncalibrated ADC counts",
+  "spectrum_normalization": "one-sided FFT amplitude / sum(Tukey window)",
+  "contrast_definition": "sqrt(max(signal_amplitude^2 - background_amplitude^2, 0))"
+}
