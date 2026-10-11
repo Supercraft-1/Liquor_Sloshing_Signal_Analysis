@@ -1,6 +1,5 @@
 function diagnostics = analyze_diagnostics(result)
-%ANALYZE_DIAGNOSTICS Time-local PSD, activity intervals and nearby spectrum peaks.
-% No subtraction, notch filtering, excitation identification or decay fitting.
+%ANALYZE_DIAGNOSTICS 计算逐帧 PSD、局部活动区间和邻近谱峰。
 c = result.config;
 validate_settings(c, numel(result.signal.filtered));
 diagnostics.time_frequency.signal = frame_spectrum(result.signal, c);
@@ -57,7 +56,7 @@ response.time_s = segment.time_s;
 response.rms_adc = sqrt(movmean(x.^2, [left, right], 'Endpoints', 'shrink'));
 response.baseline_adc = median(response.rms_adc);
 response.robust_spread_adc = 1.4826 * median(abs(response.rms_adc - response.baseline_adc));
-% A scale-relative rise guard avoids triggering on tiny tone-envelope ripples.
+% 相对上升项抑制稳定正弦的微小包络起伏。
 rise = max([d.threshold_mad_multiplier * response.robust_spread_adc, ...
     d.minimum_relative_rise * response.baseline_adc, 32 * eps(max(response.rms_adc))]);
 response.threshold_adc = response.baseline_adc + rise;
@@ -96,7 +95,7 @@ response.candidates = table((1:numel(startTime))', startTime, endTime, peakTime,
 end
 
 function common = nearby_peaks(spectrum, c, sampleCount)
-% Half of the Hann main-lobe zero-to-zero width, not a confidence interval.
+% 容差取 Hann 主瓣零点间宽度的一半，不代表统计置信区间。
 common.match_tolerance_hz = 2 * c.fs / sampleCount;
 common.minimum_prominence_fraction = c.diagnostics.peak_prominence_fraction;
 inBand = spectrum.frequency_hz >= c.band_hz(1) & spectrum.frequency_hz <= c.band_hz(2);

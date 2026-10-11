@@ -32,7 +32,7 @@ testCase.TestData.figures = captured;
 testCase.TestData.work = work;
 
     function captureFigure(fig, ~)
-        % Inspect actual rendered graphics immediately before normal disposal.
+        % 在图窗关闭前读取实际图形对象。
         axesObjects = findall(fig, 'Type', 'axes');
         entry.axes = cell(1, numel(axesObjects));
         entry.theme = char(fig.Theme.BaseColorStyle);
@@ -59,8 +59,7 @@ testCase.TestData.work = work;
         entry.textColors = arrayfun(@(t) norm(t.Color), texts);
         entry.bars = numel(findall(fig, 'Type', 'bar'));
         images = findall(fig, 'Type', 'image');
-        entry.images = arrayfun(@(im) struct('data', im.CData, 'alpha', im.AlphaData), ...
-            images, 'UniformOutput', false);
+        entry.images = arrayfun(@captureImage, images, 'UniformOutput', false);
         captured{end + 1} = entry;
     end
 end
@@ -152,6 +151,36 @@ for i = 1:2
 end
 end
 
+function testShortTimeColorsAvoidBlackWhiteContrast(testCase)
+images = diagnosticImages(testCase.TestData.figures);
+assertNumElements(testCase, images, 2);
+for i = 1:2
+    map = images{i}.map;
+    luminance = map * [0.2126; 0.7152; 0.0722];
+    verifyGreaterThan(testCase, min(luminance), 0.18);
+    verifyLessThan(testCase, max(luminance), 0.94);
+    verifyLessThanOrEqual(testCase, diff(luminance), zeros(size(luminance, 1) - 1, 1));
+    verifyGreaterThan(testCase, min(map(:, 3) - map(:, 1)), 0.015);
+end
+end
+
+function testShortTimeRecordsShareColorScale(testCase)
+images = diagnosticImages(testCase.TestData.figures);
+assertNumElements(testCase, images, 2);
+verifyEqual(testCase, images{1}.map, images{2}.map);
+verifyEqual(testCase, images{1}.limits, images{2}.limits);
+end
+
+function testFiniteSpectrogramsExportWithoutAlphaMask(testCase)
+images = diagnosticImages(testCase.TestData.figures);
+assertNumElements(testCase, images, 2);
+for i = 1:2
+    verifyTrue(testCase, all(isfinite(images{i}.data), 'all'));
+    assertTrue(testCase, isscalar(images{i}.alpha));
+    verifyEqual(testCase, images{i}.alpha, 1);
+end
+end
+
 function testDiagnosticPlotUsesActualLocalRMS(testCase)
 r = testCase.TestData.result;
 line = findPlottedValues(testCase.TestData.figures, r.diagnostics.responses.signal.rms_adc);
@@ -174,6 +203,7 @@ mkdir(directory);
 previous = get(groot, 'DefaultFigureDeleteFcn');
 restore = onCleanup(@() set(groot, 'DefaultFigureDeleteFcn', previous));
 limits = [];
+zeroImageAlphas = {};
 set(groot, 'DefaultFigureDeleteFcn', @captureZeroAxis);
 plot_case(raw, r, directory);
 assertNumElements(testCase, limits, 2);
@@ -181,10 +211,17 @@ verifyEqual(testCase, limits(1), 0);
 verifyGreaterThanOrEqual(testCase, limits(2), 1);
 verifyLessThanOrEqual(testCase, limits(2), 10);
 verifyEqual(testCase, r.diagnostics.responses.signal.rms_adc, zeros(5000, 1));
+assertNumElements(testCase, zeroImageAlphas, 2);
+verifyTrue(testCase, all(cellfun(@(a) all(a == 0, 'all'), zeroImageAlphas)));
 set(groot, 'DefaultFigureDeleteFcn', previous);
 clear restore
 
     function captureZeroAxis(fig, ~)
+        imageObjects = findall(fig, 'Type', 'image');
+        if ~isempty(imageObjects)
+            zeroImageAlphas = arrayfun(@(im) im.AlphaData, imageObjects, ...
+                'UniformOutput', false);
+        end
         axesObjects = findall(fig, 'Type', 'axes');
         for i = 1:numel(axesObjects)
             if contains(string(axesObjects(i).YLabel.String), '局部 RMS')
@@ -192,6 +229,19 @@ clear restore
             end
         end
     end
+end
+
+function item = captureImage(im)
+ax = ancestor(im, 'axes');
+item = struct('data', im.CData, 'alpha', im.AlphaData, ...
+    'map', ax.Colormap, 'limits', ax.CLim);
+end
+
+function images = diagnosticImages(figures)
+images = {};
+for entry = figures
+    images = [images, entry{1}.images(:)']; %#ok<AGROW>
+end
 end
 
 function found = findPlottedValues(figures, expected)

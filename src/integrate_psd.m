@@ -1,7 +1,7 @@
 function power = integrate_psd(frequency, density, band)
-%INTEGRATE_PSD Integrate a PSD over exact, possibly off-grid band boundaries.
-% Frequency is in Hz, density in ADC counts^2/Hz, and output in ADC counts^2.
-% Linear interpolation and trapezoids partition adjacent bands consistently.
+%INTEGRATE_PSD 在精确频段边界上积分 PSD。
+% 输入频率单位为 Hz，PSD 为 ADC 计数平方/Hz，输出为 ADC 计数平方。
+% 边界线性插值后作梯形积分，使相邻频段连续衔接。
 validateattributes(frequency, {'double'}, {'column', 'real', 'finite', 'nonnegative'});
 validateattributes(density, {'double'}, {'column', 'real', 'finite', 'nonnegative'});
 validateattributes(band, {'numeric'}, {'vector', 'numel', 2, 'real', 'finite'});

@@ -1,25 +1,25 @@
-# 图表排版说明
+# 图表格式
 
-图是 `run_demo` 的实际输出，不是概念插画。绘图函数只读取分析结果，不平滑曲线、不重新拟合数据，也不改变窗口、频率网格和归一化方式。
+图宽 18 cm，白底，中文无衬线字体，常规字号约 8 pt。PNG 导出为 600 dpi。波形、FFT 和功率谱 PDF 保留矢量曲线和文字；含谱矩阵的 `diagnostics.pdf` 使用 600 dpi 图像导出。
 
-## 本例的取舍
+## 曲线与坐标
 
-- 18 cm 宽白底图，中文无衬线字体，字号约 8 pt；PNG 600 dpi，PDF 的曲线与文字保留矢量图元，谱矩阵作为图像嵌入。
-- 黑色实验曲线、蓝色背景曲线；频谱同时用实线／虚线区分，便于灰度阅读。
-- 小号子图标识、黑色文字、细坐标轴；移除大标题、背景网格、阴影与彩色说明框。详细条件放在 README 图注和方法说明中。
-- 频段积分用对数纵轴的散点表示，实心圆／空心方块区分两份独立记录。不同频段不连线；没有重复样本，故不画误差条。
-- 实验与背景波形采用独立纵轴，明确标注；频谱使用同一坐标进行对照。零值仅在对数图上留空，数值文件保留原值。
-- 短时谱采用共同灰度标尺、相同频率范围，不做时间／频率插值。80 dB 显示范围只控制颜色映射，不裁剪导出的 PSD 数值；零 PSD 像素留白。
-- 活动候选采用浅灰区域和小空心圆；FFT 中的空心圆仅提示邻近背景峰。不添加模态标签、拟合曲线或未经重复测量支持的误差条。
+实验曲线为黑色，背景曲线为蓝色。频谱用实线和虚线区分，频段积分用实心圆和空心方块区分。坐标轴采用细线、向外刻度，不显示网格。条件及计算细节放在图注中。
 
-采用 Noto Sans SC 或 Noto Sans CJK SC；Windows 也支持 Microsoft YaHei UI／Microsoft JhengHei，macOS 支持 PingFang SC／Heiti SC。没有可用中文字体时明确报错，避免生成方框乱码。不同系统的字体细节可能不同，复现以数值和图形内容为准。
+实验和背景波形各用独立纵轴；频谱共用坐标。频段积分按独立频段画点。样例只有一对记录，未绘制重复实验误差条。对数轴省略非正值，数值文件保留这些值。
 
-## 参考
+## 短时谱
 
-参考 [Nature 的科研图准备指南](https://research-figure-guide.nature.com/figures/preparing-figures-our-specifications/) 关于去除无关装饰、清晰轴标签、可访问配色和矢量导出的原则。中文标签和网页阅读字号是本项目的选择，**不声称已满足某期刊的全部投稿规格**。
+两幅谱图共用频率范围、dB 色标和连续蓝灰色阶。低值为浅蓝灰，高值为深蓝，色阶不包含纯白或纯黑。亮度随 PSD 增大单调降低，避免局部明暗反转。
 
-[Huang 等，Nature 626, 512–516 (2024)](https://www.nature.com/articles/s41586-023-06997-3) 中的噪声功率谱及其详细图注，可作为“同一坐标比较测量曲线、将解释移入图注”的组织参考；其物理系统与本例不同，不能据此类推检测性能。
+颜色范围为 80 dB，超过显示范围的数值仍完整保存到 CSV。谱矩阵按实际帧和频率箱显示，不做插值。活动区间使用浅灰底色，峰值位置用空心圆标记。
 
-PDF 在 Windows 上导出并检查中文。优先使用静态中文字体，避免部分可变字体在 PDF 中被映射到过细字重。绘图固定为浅色主题，坐标区显式设为白底，不受 MATLAB 桌面深色设置影响；依据见 [MathWorks 图形主题说明](https://www.mathworks.com/help/matlab/creating_plots/graphics-and-app-themes.html)。
+## 字体与导出
 
-MATLAB 在某些 Linux 环境会将字体转成轮廓；这仍是矢量图，但文字不一定可搜索。需要可编辑文字的投稿版本，应在目标环境单独检查字体嵌入。
+支持 Noto Sans SC／Noto Sans CJK SC、Microsoft YaHei UI／Microsoft JhengHei，以及 macOS 的 PingFang SC／Heiti SC。缺少中文字体时程序报错。
+
+绘图固定使用浅色主题，不随 MATLAB 桌面主题改变。静态中文字体在 PDF 中的字重较稳定；部分 Linux 环境会将文字转成轮廓，投稿前应检查目标环境的字体嵌入。
+
+含图像的图窗强制使用矢量模式时可能出现细线伪影，参见 [MathWorks 导出说明](https://www.mathworks.com/help/matlab/ref/exportgraphics.html)。短时谱 PDF 因此采用高清图像模式。
+
+排版参考 [Nature 科研图指南](https://research-figure-guide.nature.com/figures/preparing-figures-our-specifications/)；主题设置见 [MathWorks 文档](https://www.mathworks.com/help/matlab/creating_plots/graphics-and-app-themes.html)。

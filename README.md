@@ -1,88 +1,66 @@
-# 实验振动信号的离线频谱分析
+# 实验振动信号分析
 
 [![MATLAB reproduction](https://github.com/Supercraft-1/Liquor_Sloshing_Signal_Analysis/actions/workflows/reproduce.yml/badge.svg)](https://github.com/Supercraft-1/Liquor_Sloshing_Signal_Analysis/actions/workflows/reproduce.yml)
 
-使用一段实验记录和一段背景记录，完成时域预处理、FFT 幅值谱、Welch 功率谱与频段统计，并查看响应随时间的变化。输入数据、处理参数、参考数值和结果图均随仓库提供。
+对一组实验记录和背景记录进行离线分析，包括波形、FFT 幅值谱、Welch 功率谱、频段积分及短时响应。仓库附有原始记录、示例 CSV、固定参数和参考结果。
 
-**唯一运行入口：`run_demo.m`。** 不需要采集设备，不弹出选文件或选区间窗口，也不需要在历史实验版本之间选择。
+## 运行
 
-## 三步运行
-
-环境：**MATLAB R2025b + Signal Processing Toolbox**。无需 Excel、串口、Python 或第三方 MATLAB 包。
-
-1. 点击 **Code → Download ZIP**，解压整个仓库。
-2. 在 MATLAB 中，把 **Current Folder** 切换到包含 `run_demo.m` 的仓库根目录。
-3. 在命令窗口运行：
+需要 MATLAB R2025b 和 Signal Processing Toolbox。下载并解压仓库，在 MATLAB 中打开仓库根目录，运行：
 
 ```matlab
 run_demo
 ```
 
-运行完成后，结果写入自动创建的 `output/`。再次运行会更新同名结果，原始数据不会被修改。
+程序读取 `data/` 下的两份 CSV，结果保存到 `output/`。重复运行会覆盖同名输出，输入数据保持原样。也可以指定保存目录：
 
-| 结果文件 | 内容 |
-| --- | --- |
-| `waveform.png / .pdf` | 原始记录、分析窗口、实验与背景的 AC 波形 |
-| `spectrum.png / .pdf` | 独立 FFT 幅值谱及低频局部放大 |
-| `power.png / .pdf` | Welch PSD、频段功率和实验功率占比 |
-| `diagnostics.png / .pdf` | 短时 PSD、局部 RMS、响应区间候选与高频段时间变化 |
-| `metrics.csv` | RMS、谱峰、质心与总频段功率 |
-| `band_metrics.csv` | 每个频段的实验／背景功率、等效 RMS 和占比 |
-| `spectrum.csv / psd.csv` | 完整频率网格与频谱数值，用于自行作图 |
-| `time_frequency.csv / time_band_metrics.csv` | 平均前的逐帧 PSD 与四个频段的逐帧积分 |
-| `local_rms.csv / response_candidates.csv` | 局部 RMS 与超阈值活动区间；时间来自各自记录 |
-| `common_peaks.csv` | 实验／背景邻近强峰的频率、距离和幅值，不作来源认定 |
-| `analysis.mat` | 完整 `result` 结构体 |
-| `run_metadata.json` | 环境版本、参数、归一化方式和单位 |
+```matlab
+result = run_demo('D:/my-results');
+```
 
-PNG 为 600 dpi，PDF 保留矢量曲线和文字，短时谱矩阵作为图像嵌入。图表使用中文标签、白底细线和无网格坐标；需要安装 Noto Sans SC／Noto Sans CJK SC 或受支持的系统中文字体。排版取舍见 [图表规范](docs/figure_style.md)。
+中文图使用 Noto Sans SC／Noto Sans CJK SC，或受支持的系统中文字体。Windows 可使用微软雅黑，Ubuntu 安装 `fonts-noto-cjk`。PNG 为 600 dpi；波形、FFT 和功率谱 PDF 保留矢量曲线和文字，短时分析 PDF 使用 600 dpi 图像导出。
 
-## 数据与固定参数
+## 数据和参数
 
-示例来自仓库原有的 `Signal_0512_2320.xlsx` 和 `Background_0512_2319.xlsx`。两份 CSV 完整保留时间戳和 ADC 计数，**没有合成、重采样或截断**；原始文件、样本数和哈希见 [数据来源](data/README.md)。
+示例取自 `Signal_0512_2320.xlsx` 和 `Background_0512_2319.xlsx`。CSV 保留完整的时间列与 ADC 计数，来源及文件哈希见 [数据说明](data/README.md)。
 
-| 项目 | 固定设置 |
+| 参数 | 设置 |
 | --- | --- |
 | 采样率 | 5000 Hz |
-| 实验窗口 | `[0.60, 1.60)` s，5000 点 |
-| 背景窗口 | `[0.20, 1.20)` s，5000 点 |
-| 预处理 | 完整记录去均值 → SOS 零相位带通 → 截窗 → 去除窗口残余均值 |
-| 带通 | 20–2000 Hz，4 阶 Butterworth 原型；单次带通为 8 阶，前后向滤波 |
-| FFT | 1 s 周期 Hann 窗，8192 点，幅值按窗相干增益归一化 |
-| Welch PSD | 1000 点周期 Hann 窗，500 点重叠，2048 点 FFT，9 段平均 |
+| 实验窗口 | [0.60, 1.60) s，5000 点 |
+| 背景窗口 | [0.20, 1.20) s，5000 点 |
+| 预处理 | 完整记录去均值、SOS 零相位带通；截窗后再次去均值 |
+| 带通 | 20–2000 Hz，4 阶 Butterworth 原型，单次带通为 8 阶 |
+| FFT | 1 s 周期 Hann 窗，8192 点，按窗相干增益修正幅值 |
+| Welch | 1000 点周期 Hann 窗，500 点重叠，2048 点 FFT，9 帧平均 |
 | 统计频段 | 20–50、50–300、300–1000、1000–2000 Hz |
+| 局部 RMS | 20 ms 窗；合并间隙不超过 40 ms，实际活动时长至少 6 ms |
 
-参数集中在 [src/case_config.m](src/case_config.m)，默认入口始终运行这一对数据、这一套参数。
+参数在 [src/case_config.m](src/case_config.m)。完整计算过程见 [方法说明](docs/methodology.md)，局部活动阈值和谱峰匹配规则见 [短时分析](docs/time_diagnostics.md)。
 
-## 应当看到的结果
+## 示例结果
 
-参考文件位于 `expected/`，由同一入口实际生成，不是另行绘制的示意图。
+### 波形
 
-### 时域：先看记录，再看窗口内响应
+![原始实验记录及分析窗口内的实验和背景波形](expected/waveform.png)
 
-![原始记录、分析窗口与独立纵轴的实验和背景波形](expected/waveform.png)
+灰线为完整实验记录，黑线标出分析窗口。实验与背景的窗口波形采用独立纵轴，AC RMS 分别为 196.9121 和 8.2696 ADC counts。
 
-灰色为整段原始实验记录，黑色段与虚线边界标出固定分析窗口。下方将实验与背景分开展示，**两个子图的纵轴范围不同**，因此背景的小幅波动也能看清。两条波形来自独立记录，不表示同步采样。
+[波形 PDF](expected/waveform.pdf)
 
-实验 AC RMS 为 **196.9121 ADC counts**，背景为 **8.2696 ADC counts**。
+### FFT 幅值谱
 
-[矢量 PDF](expected/waveform.pdf)
+![FFT 幅值谱及低频局部放大](expected/spectrum.png)
 
-### 幅值谱：保留谱峰细节
+实验为黑色实线，背景为蓝色虚线。实验最大幅值位于 50.0488 Hz，对应 95.0972 ADC counts。下图空心圆标出与背景强峰相距不超过 2 Hz 的实验峰。
 
-![独立 FFT 幅值谱和未经额外平滑的低频局部放大](expected/spectrum.png)
+[频谱 PDF](expected/spectrum.pdf)
 
-上图用对数频率轴展示整个分析频段，下图放大 20–200 Hz。黑色实线和蓝色虚线分别为实验与背景的独立幅值谱，没有做谱减，也没有为了图形平滑而再滤波。下图空心圆标出与背景强峰相距不超过 2 Hz 的实验峰；标记不改变谱值，也不表示两峰的物理来源相同。
+### Welch 功率谱与频段积分
 
-实验最大 FFT 频点为 **50.0488 Hz**，对应幅值 **95.0972 ADC counts**。背景在约 50 Hz 附近也有谱峰；仅凭这对记录，不能把该频率认定为样品特征或瓶体固有频率。
+![Welch 功率谱密度及四个频段的积分](expected/power.png)
 
-[矢量 PDF](expected/spectrum.pdf)
-
-### 功率谱：比较各频段贡献
-
-![Welch 功率谱密度和频段积分功率](expected/power.png)
-
-Welch PSD 用分段平均展示频谱的整体分布；下方点图是对 PSD 按频率积分后的均方响应，单位为 **ADC counts²**，纵轴采用对数刻度。黑色实心圆与蓝色空心方块分别表示实验与背景，不连线、不添加误差条。圆点上方的百分比是该频段占实验 20–2000 Hz 功率的比例，不是信噪比。
+下图各点为 PSD 的频段积分，百分比为该频段占实验总功率的比例。
 
 | 频段 | 实验功率（ADC counts²） | 背景功率（ADC counts²） | 实验占比 |
 | --- | ---: | ---: | ---: |
@@ -91,66 +69,66 @@ Welch PSD 用分段平均展示频谱的整体分布；下方点图是对 PSD �
 | 300–1000 Hz | 173.9121 | 2.8294 | 0.40% |
 | 1000–2000 Hz | 17.0605 | 2.1581 | 0.04% |
 
-实验 20–2000 Hz 的 PSD 积分为 **43463.8817 ADC counts²**。这条记录含多次瞬态，Welch 加窗平均与整窗时域 RMS 的时间权重不同，两者不要求严格平方对应。
+实验 20–2000 Hz 的积分为 43463.8817 ADC counts²。Welch 使用分帧加窗平均，其时间权重与整窗 RMS 不同。
 
-[矢量 PDF](expected/power.pdf) · [完整指标](expected/metrics.csv) · [频段指标](expected/band_metrics.csv)
+[功率谱 PDF](expected/power.pdf) · [汇总指标](expected/metrics.csv) · [频段指标](expected/band_metrics.csv)
 
-### 时间变化：总体频谱没有展示的信息
+### 短时功率谱与响应区间
 
-![两份独立记录的短时功率谱、活动区间候选和高频段均方响应](expected/diagnostics.png)
+![实验和背景短时功率谱、局部 RMS 及高频段时间变化](expected/diagnostics.png)
 
-上方是平均前的 9 帧 PSD，沿用 Welch 的 0.20 s 窗和 0.10 s 步长，使用同一灰度标尺。图中只放大 20–300 Hz，CSV 保留完整频率范围。实验和背景来自独立采集，横轴为各自记录时间，不能按横坐标比较事件同步性。
+上方为平均前的 9 帧 PSD，放大到 20–300 Hz，使用共同的蓝灰色标。左下灰色区域是局部 RMS 超阈值区间，右下为每帧 300–2000 Hz 的积分。
 
-左下方用 20 ms 局部 RMS 查找较强的活动区间，灰色区域为候选，空心圆为候选内的 RMS 最大值。本例实验有 **4 段候选**、背景有 **0 段**；它们不是已识别的施力时刻，也不是自动截出的自由衰减段。
+实验检出 4 段活动，背景为 0 段。第 3 段包含间隔较近、合并后的活动区间。
 
-| 候选 | 区间（s，右端不包含） | 局部 RMS 最大值时刻（s） |
-| --- | --- | ---: |
-| 1 | [0.6714, 0.7010) | 0.6834 |
-| 2 | [0.9012, 0.9336) | 0.9178 |
-| 3 | [1.1444, 1.2236) | 1.2060 |
-| 4 | [1.4964, 1.5264) | 1.5088 |
+| 区间（s，右端不包含） | 局部 RMS 最大值时刻（s） |
+| --- | ---: |
+| [0.6714, 0.7010) | 0.6834 |
+| [0.9012, 0.9336) | 0.9178 |
+| [1.1444, 1.2236) | 1.2060 |
+| [1.4964, 1.5264) | 1.5088 |
 
-右下方为每帧 300–2000 Hz 的 PSD 积分，显示整体高频均方响应怎样随时间变化。连接帧中心的线只是便于阅读，不是额外拟合。横轴从各自分析窗口起点计时，不表示两次记录同步。
+两条 FFT 有 4 对邻近强峰，约在 50、84–85、100 和 150 Hz。其中 83.62 与 85.45 Hz 相差约 1.83 Hz，只是落在匹配容差内。
 
-另有 **4 对邻近谱峰**，大致位于 50、84–85、100 和 150 Hz。其中 83.62 与 85.45 Hz 相差约 1.83 Hz，仅落在匹配容差内，不能称为已确认的同一频率。完整值见 [邻近峰表](expected/common_peaks.csv)。
+[短时分析 PDF](expected/diagnostics.pdf) · [活动区间](expected/response_candidates.csv) · [邻近峰](expected/common_peaks.csv) · [逐帧频段积分](expected/time_band_metrics.csv)
 
-[诊断图 PDF](expected/diagnostics.pdf) · [候选区间](expected/response_candidates.csv) · [逐帧频段积分](expected/time_band_metrics.csv) · [参数与判断规则](docs/time_diagnostics.md)
+### 结果的解释
 
-## 方法与代码
+实验和背景是独立记录，图中的时间不代表同步采样。ADC 尚未标定为电压或加速度，频段积分的单位是计数平方。
 
-```mermaid
-flowchart LR
-    A["真实 CSV<br/>时间 / ADC"] --> B["完整记录<br/>去均值 + SOS 零相位带通"]
-    B --> C["固定窗口<br/>各 1 s / 5000 点"]
-    C --> D["时域波形<br/>AC RMS"]
-    C --> E["Hann FFT<br/>幅值与谱峰"]
-    C --> F["Welch PSD<br/>频段功率与占比"]
-    C --> G["逐帧 PSD / 局部 RMS<br/>时间变化与活动候选"]
-    E --> H["独立峰匹配<br/>邻近谱峰提示，不删除峰"]
-```
+约 50 Hz 的峰在两条记录中都存在，来源需要实验验证。局部 RMS 区间用于定位较强活动，不能单凭它确定施力或自由衰减的起止；邻近峰匹配也不等同于同一物理模态。当前分析保留两条独立频谱，不作谱减、50 Hz 陷波或模态参数拟合。
 
-FFT 回答“哪些频点的幅值较大”，PSD 积分回答“这个频段贡献了多少均方响应”。两者采用不同的窗归一化，不能直接混用。窗口长度、频率网格、滤波顺序及指标公式见 [处理方法](docs/methodology.md)。
+相关方法及后续实验条件见 [12 篇文献的阅读记录](docs/literature_review.md)。
 
-记录中的 ADC 尚未标定为电压或加速度。本例展示信号处理过程，不输出液体分类、检测准确率或单次自由衰减参数。
+## 输出和代码
 
-算法依据和适用条件见 [12 篇相关文献与算法取舍](docs/literature_review.md)，涵盖谱估计、短时分析、瞬态检测、模态识别及容器液体响应。已加入默认入口的三项诊断与后续有条件的模态拟合分开说明；本轮没有实现谱峭度、ERA、SSI 或液体分类。
+| 输出 | 内容 |
+| --- | --- |
+| `waveform`、`spectrum`、`power`、`diagnostics` 的 PNG／PDF | 四组结果图 |
+| `metrics.csv`、`band_metrics.csv` | 汇总指标、频段功率及占比 |
+| `spectrum.csv`、`psd.csv` | 完整 FFT 幅值谱和 Welch PSD |
+| `time_frequency.csv`、`time_band_metrics.csv` | 逐帧 PSD 和频段积分 |
+| `local_rms.csv`、`response_candidates.csv` | 局部 RMS 和活动候选区间 |
+| `common_peaks.csv` | 邻近峰的频率、距离和幅值 |
+| `analysis.mat` | 完整 `result` 结构体 |
+| `run_metadata.json` | MATLAB 版本、参数、单位和计算规则 |
 
 ```text
-run_demo.m               唯一入口，串联读取、分析和导出
-src/case_config.m        固定案例参数
-src/load_recording.m     CSV 列检查与读取
-src/analyze_pair.m       数据检查、全记录滤波、FFT / Welch 和指标
-src/analyze_diagnostics.m 逐帧 PSD、局部活动候选和邻近峰匹配
-src/integrate_psd.m      精确频段边界插值与积分
-src/plot_case.m          统一图表样式，导出 PNG / PDF
-src/export_results.m     表格、MAT 和方法元数据
-data/                    两份完整 CSV 及来源
-expected/                实际生成的参考图与数值
-tests/                   分析方法与端到端复现测试
-legacy/                  原始采集／分析版本和 Excel 记录，不参与默认运行
+run_demo.m                 运行入口
+src/case_config.m          参数
+src/load_recording.m       读取 CSV
+src/analyze_pair.m         数据检查、预处理、FFT、Welch 及汇总指标
+src/analyze_diagnostics.m  逐帧谱、活动区间和峰匹配
+src/integrate_psd.m        精确频段边界积分
+src/plot_case.m            绘图
+src/export_results.m       保存表格、MAT 和元数据
+data/                      示例 CSV
+expected/                  参考图和数值
+tests/                     数值与复现测试
+legacy/                    历史程序和 Excel 记录
 ```
 
-## 核对与常见问题
+## 测试
 
 在仓库根目录运行：
 
@@ -159,14 +137,10 @@ results = runtests('tests');
 assertSuccess(results);
 ```
 
-测试覆盖解析正弦信号的频率、幅值和均方功率，补零与功率积分、逐帧 PSD 与 Welch 的一致性、候选定位／合并／最短活动／边缘窗口、邻近峰一对一匹配，以及原始数据、重复运行、输出文件和无效输入。零响应不生成候选或谱峰，并采用正常的非负图轴。参考数值用容差比较，不要求跨平台 PNG 的像素完全一致。
+测试覆盖正弦幅值与均方功率、PSD 归一化、频段积分、活动合并、边缘窗口、峰匹配、零响应和无效输入，并核对示例结果。参考数值按容差比较；不同系统的字体和图像像素可能略有差别。
 
-[GitHub Actions](https://github.com/Supercraft-1/Liquor_Sloshing_Signal_Analysis/actions/workflows/reproduce.yml) 会在独立 Ubuntu 环境安装 R2025b 和工具箱，运行这些测试及 `run_demo`，将 19 个输出文件作为附件保留 7 天。
+[GitHub Actions](https://github.com/Supercraft-1/Liquor_Sloshing_Signal_Analysis/actions/workflows/reproduce.yml) 在 Ubuntu 中运行 R2025b 测试，生成的 19 个输出文件保留 7 天。
 
-- **找不到 `run_demo`**：确认当前文件夹是仓库根目录，不是 `src/` 或 `legacy/`。
-- **`Sloshing:MissingToolbox`**：安装并激活 Signal Processing Toolbox。
-- **`Sloshing:MissingChineseFont`**：安装免费的 Noto Sans SC 字体后重启 MATLAB；Ubuntu 可安装 `fonts-noto-cjk`。自动复现环境已配置此步骤。
-- **写入失败**：把仓库放到可写目录；也可用 `run_demo('D:/my-results')` 指定输出位置。它只改变保存位置，不改变实验。
-- **结果与旧图不同**：处理顺序、窗函数和功率计算已统一；请与当前 `expected/` 比较，不再使用历史界面的数值作为参考。
+找不到入口时，检查当前目录是否包含 `run_demo.m`；缺少工具箱或中文字体时，程序会提示安装。旧交互程序留在 `legacy/`，不参与上述运行流程。
 
 代码与公开数据采用 [MIT License](LICENSE)。

@@ -1,5 +1,5 @@
 function data = load_recording(filename)
-%LOAD_RECORDING Read the committed time/ADC CSV without modifying its samples.
+%LOAD_RECORDING 读取示例 CSV 的时间列和 ADC 列。
 if ~isfile(filename)
     error('Sloshing:MissingData', 'Missing recording: %s. Download the complete repository.', filename);
 end

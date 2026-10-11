@@ -91,7 +91,7 @@ end
 
 function testFullSupportEdgeWindowsAreNotMarkedShortened(testCase)
 r = analyze_tones(testCase, 125, 125);
-% Isolate RMS support geometry with two impulses in the filtered-input stage.
+% 在预处理输入中放置两个脉冲，单独检查 RMS 窗口的支持范围。
 r.signal.filtered(:) = 0;
 r.signal.filtered([100, 4901]) = 1;
 r.config.diagnostics.merge_gap_s = 0;
@@ -222,7 +222,7 @@ end
 
 function r = separated_activity_fixture(testCase)
 r = analyze_tones(testCase, 125, 125);
-% Two separated, exactly known active runs; no bandpass tails or RMS overlap.
+% 构造两个分离的活动段，排除带通尾部和 RMS 重叠的影响。
 r.signal.filtered(:) = 0;
 r.signal.filtered([500:509, 560:569]) = 1;
 r.config.diagnostics.envelope_window_s = 2 / r.config.fs;

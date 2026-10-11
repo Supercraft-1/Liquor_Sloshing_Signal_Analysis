@@ -1,6 +1,6 @@
 function prepare_example_data
-%PREPARE_EXAMPLE_DATA Export the two original recordings without resampling.
-% Developer utility; the public example already includes these CSV files.
+%PREPARE_EXAMPLE_DATA 将两份原始 Excel 记录转为 CSV，核对时间和 ADC 值。
+% 用于重新准备示例数据；正常运行直接使用 data/ 中的 CSV。
 root = fileparts(fileparts(mfilename('fullpath')));
 target = fullfile(root, 'data');
 if ~isfolder(target)

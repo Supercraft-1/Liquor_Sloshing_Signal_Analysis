@@ -1,5 +1,5 @@
 function tests = test_spectral_method
-% Analytical checks catch incorrect spectral normalization and band integration.
+% 用已知解析结果检查频谱归一化和频段积分。
 tests = functiontests(localfunctions);
 end
 
@@ -25,7 +25,7 @@ path(testCase.TestData.oldPath);
 end
 
 function testKnownToneHasPhysicalMeanSquarePower(testCase)
-% A missing fs/window normalization changes the expected A^2/2 power.
+% 缺少采样率或窗归一化时，功率会偏离已知值 A²/2。
 [signal, background] = tone_pair(125, 100, 0);
 result = analyze_pair(signal, background, testCase.TestData.config);
 assertTrue(testCase, isfield(result, 'psd'), 'Welch PSD is required.');
@@ -37,7 +37,7 @@ verifyEqual(testCase, result.bands.Experiment_Power_ADC2(2), 5000, 'RelTol', 0.0
 end
 
 function testSpectralPowerDoesNotGrowWithZeroPadding(testCase)
-% Summing FFT amplitude squared instead of integrating PSD fails this check.
+% 若将 FFT 幅值平方求和误作 PSD 积分，此检查会失败。
 [signal, background] = tone_pair(125, 100, 0);
 config = testCase.TestData.config;
 coarse = analyze_pair(signal, background, config);
@@ -49,7 +49,7 @@ verifyEqual(testCase, fine.bands.Experiment_Power_ADC2(2), ...
 end
 
 function testBackgroundDoesNotEraseExperimentFFT(testCase)
-% Spectrum subtraction would remove this tone because background is stronger.
+% 背景正弦更强；若作谱减，实验中的同频峰会被错误消除。
 [signal, background] = tone_pair(125, 100, 150);
 result = analyze_pair(signal, background, testCase.TestData.config);
 verifyEqual(testCase, result.peak_frequency_hz, 125, 'AbsTol', 5000 / 8192);
@@ -83,16 +83,16 @@ verifyEqual(testCase, shifted.signal.filtered, original.signal.filtered, 'AbsTol
 end
 
 function testFilteringUsesSamplesOutsideAnalysisWindow(testCase)
-% Cropping before filtfilt would make these two processed windows identical.
+% 若先截窗再滤波，下面两个窗口会得到相同结果。
 [signal, background] = tone_pair(125, 100, 0);
 original = analyze_pair(signal, background, testCase.TestData.config);
-signal(2951, 2) = signal(2951, 2) + 10000; % 0.5900 s, outside the window.
+signal(2951, 2) = signal(2951, 2) + 10000; % 0.5900 s，位于分析窗口之外。
 changed = analyze_pair(signal, background, testCase.TestData.config);
 verifyGreaterThan(testCase, max(abs(changed.signal.filtered - original.signal.filtered)), 1);
 end
 
 function testBandIntegralIncludesInterpolatedBoundaries(testCase)
-% A bin-count sum or snapping the band edges changes the literal area of 540.
+% 直接数频率箱或移动边界会改变已知积分面积 540。
 assertEqual(testCase, exist('integrate_psd', 'file'), 2);
 f = (0:10:100)';
 verifyEqual(testCase, integrate_psd(f, 10 * ones(size(f)), [13, 67]), 540, 'AbsTol', 1e-10);

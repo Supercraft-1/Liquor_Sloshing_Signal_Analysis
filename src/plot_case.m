@@ -1,5 +1,5 @@
 function plot_case(rawSignal, result, outputDir)
-%PLOT_CASE Chinese research figures; no smoothing or numerical modification.
+%PLOT_CASE 根据分析结果绘制中文图，导出 PNG 和 PDF。
 s.signal = [0, 0, 0];
 s.background = [0, 0.447, 0.698];
 s.raw = [0.65, 0.65, 0.65];
@@ -162,10 +162,15 @@ for i = 1:2
     ax = nexttile(layout);
     visible = tf{i}.frequency_hz >= 20 & tf{i}.frequency_hz <= 300;
     values = 10 * log10(tf{i}.density(visible, :));
+    alpha = isfinite(values);
+    if all(alpha, 'all')
+        % 完整谱图无需逐点遮罩；零功率仍按矩阵留白。
+        alpha = 1;
+    end
     imagesc(ax, tf{i}.frame_center_s, tf{i}.frequency_hz(visible), values, ...
-        'AlphaData', isfinite(values));
+        'AlphaData', alpha);
     ax.YDir = 'normal';
-    colormap(ax, flipud(gray(256)));
+    colormap(ax, bluegray_map);
     clim(ax, limits);
     xlabel(ax, '帧中心记录时间（s）'); ylabel(ax, '频率（Hz）');
     panel_title(ax, labels{i});
@@ -221,7 +226,7 @@ ax.YScale = 'log';
 positive = vertcat(framePowers{:});
 positive = positive(positive > 0);
 if ~isempty(positive)
-    % Leave a dedicated vertical margin for the legend, not over data points.
+    % 顶部留出图例空间，避免遮住数据点。
     ylim(ax, [10 ^ floor(log10(min(positive))), max(positive) * 8]);
 end
 xlabel(ax, '区间内帧中心时间（s）'); ylabel(ax, '均方响应（ADC 计数^2）');
@@ -238,6 +243,13 @@ fig = figure('Visible', 'off', 'Theme', 'light', 'Color', 'w', 'Units', 'centime
     'DefaultAxesFontName', s.font, 'DefaultAxesFontSize', 8, ...
     'DefaultTextFontName', s.font, 'DefaultTextFontSize', 8, ...
     'DefaultTextColor', 'k');
+end
+
+function map = bluegray_map
+% 蓝灰色阶由浅到深，避开纯白与纯黑；两份记录共用同一映射。
+anchors = [0.86, 0.90, 0.92; 0.68, 0.76, 0.80; ...
+    0.46, 0.59, 0.67; 0.23, 0.36, 0.45];
+map = interp1(linspace(0, 1, size(anchors, 1)), anchors, linspace(0, 1, 256));
 end
 
 function font = chinese_font
@@ -284,13 +296,20 @@ ax.XMinorGrid = 'off'; ax.YMinorGrid = 'off';
 end
 
 function values = positive_only(values)
-% Omit nonpositive values on log axes without changing stored analysis data.
+% 对数图省略非正值，保留分析结果中的原始数值。
 values(values <= 0) = NaN;
 end
 
 function export_figure(fig, outputDir, basename)
 exportgraphics(fig, fullfile(outputDir, [basename, '.png']), ...
     'Resolution', 600, 'BackgroundColor', 'white', 'Padding', 10);
-exportgraphics(fig, fullfile(outputDir, [basename, '.pdf']), ...
-    'ContentType', 'vector', 'BackgroundColor', 'white', 'Padding', 5);
+if isempty(findall(fig, 'Type', 'image'))
+    exportgraphics(fig, fullfile(outputDir, [basename, '.pdf']), ...
+        'ContentType', 'vector', 'BackgroundColor', 'white', 'Padding', 5);
+else
+    % 含谱矩阵时使用高清图像导出，避免强制矢量模式的细线伪影。
+    exportgraphics(fig, fullfile(outputDir, [basename, '.pdf']), ...
+        'ContentType', 'image', 'Resolution', 600, ...
+        'BackgroundColor', 'white', 'Padding', 5);
+end
 end

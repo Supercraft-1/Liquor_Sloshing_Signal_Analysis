@@ -1,5 +1,5 @@
 function export_results(result, outputDir)
-%EXPORT_RESULTS Store numerical outputs with explicit units and method metadata.
+%EXPORT_RESULTS 保存数值表、MAT 结果及参数和单位说明。
 writetable(result.metrics, fullfile(outputDir, 'metrics.csv'));
 writetable(result.bands, fullfile(outputDir, 'band_metrics.csv'));
 fftData = table(result.fft.frequency_hz, result.fft.signal_amplitude, ...

@@ -1,8 +1,8 @@
 function result = analyze_pair(signal, background, config)
-%ANALYZE_PAIR Deterministic offline analysis of two independent recordings.
-% Inputs: N-by-2 doubles [Time_s, ADC_Value] and the fixed case configuration.
-% Outputs: processed windows, independent FFT/PSD estimates, and band metrics.
-% Older callers need not supply the newly added optional settings section.
+%ANALYZE_PAIR 分别处理实验和背景记录，计算频谱及指标。
+% 输入为 N×2 双精度数组 [时间秒, ADC计数] 和参数结构体。
+% 返回预处理窗口、独立 FFT／PSD、频段指标及短时分析结果。
+% 兼容未提供 diagnostics 配置的调用。
 if ~isfield(config, 'diagnostics')
     defaults = case_config;
     config.diagnostics = defaults.diagnostics;
@@ -11,8 +11,7 @@ validate_config(config);
 validate_recording(signal, config.fs, 'experiment');
 validate_recording(background, config.fs, 'background');
 
-% Filter complete recordings to retain context around the analysis windows.
-% No median filter: physical excitation peaks must not be treated as outliers.
+% 先对完整记录滤波，保留分析窗口前后的上下文。
 [z, p, k] = butter(config.filter_order, config.band_hz / (config.fs / 2), 'bandpass');
 [sos, gain] = zp2sos(z, p, k);
 result.signal = process_recording(signal, config.signal_window_s, config, sos, gain);
@@ -23,7 +22,7 @@ if count ~= numel(result.background.filtered)
 end
 validate_spectral_lengths(config, count);
 
-% Amplitude and power need different window normalizations; keep them separate.
+% 幅值谱用窗系数和归一化，PSD 用窗平方和归一化。
 fftWindow = hann(count, 'periodic');
 result.fft.frequency_hz = (0:config.fft_nfft / 2)' * config.fs / config.fft_nfft;
 result.fft.signal_amplitude = amplitude_spectrum(result.signal.filtered, fftWindow, config.fft_nfft);
